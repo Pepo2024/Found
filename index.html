@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بطاقتي الشخصية</title>
+    <!-- استدعاء الخطوط والأيقونات ومكتبة الـ QR Code -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+        }
+        * { box-sizing: border-box; font-family: 'Cairo', sans-serif; margin: 0; padding: 0; }
+        body { background-color: var(--bg-color); min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; }
+        
+        .container { background: var(--card-bg); width: 100%; max-width: 450px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); padding: 30px; overflow: hidden; }
+
+        /* تنسيقات صفحة التعديل */
+        #edit-mode { display: flex; flex-direction: column; gap: 15px; }
+        #edit-mode h2 { text-align: center; color: var(--text-main); margin-bottom: 10px; }
+        .input-group { display: flex; flex-direction: column; gap: 5px; }
+        .input-group label { font-size: 14px; font-weight: 600; color: var(--text-main); }
+        .input-group input { padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; outline: none; transition: 0.3s; }
+        .input-group input:focus { border-color: var(--primary); }
+        
+        /* تنسيق زر رفع الصورة ومعاينتها */
+        .file-input-wrapper { display: flex; align-items: center; gap: 15px; background: #f9fafb; padding: 10px; border: 1px dashed #cbd5e1; border-radius: 8px; }
+        .file-input-wrapper input { border: none; padding: 0; background: transparent; width: 100%; }
+        .preview-img-edit { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: none; border: 2px solid var(--primary); }
+
+        .btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.3s; margin-top: 10px; }
+        .btn:hover { background: #1d4ed8; }
+        .btn-download { background: #10b981; display: none; text-align: center; text-decoration: none; }
+        .btn-download:hover { background: #059669; }
+
+        #qr-result { display: flex; flex-direction: column; align-items: center; margin-top: 20px; gap: 15px; }
+        #qrcode { padding: 15px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+
+        /* تنسيقات صفحة العرض (بعد الـ Scan) */
+        #view-mode { display: none; text-align: center; }
+        .profile-img { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--primary); margin: 0 auto 15px; display: block; background: #e5e7eb; }
+        .profile-name { font-size: 24px; font-weight: 800; color: var(--text-main); margin-bottom: 5px; }
+        .profile-title { font-size: 15px; color: var(--text-muted); margin-bottom: 25px; }
+
+        .links-container { display: flex; flex-direction: column; gap: 12px; }
+        .social-btn { display: flex; align-items: center; gap: 15px; padding: 15px; border-radius: 12px; text-decoration: none; color: white; font-weight: 600; font-size: 16px; transition: transform 0.2s; }
+        .social-btn:hover { transform: translateY(-2px); }
+        .social-btn i { font-size: 22px; width: 30px; }
+
+        .btn-whatsapp { background: #25D366; }
+        .btn-phone { background: #3b82f6; }
+        .btn-facebook { background: #1877F2; }
+        .btn-instagram { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); }
+        .btn-location { background: #ef4444; }
+
+        .watermark { margin-top: 30px; font-size: 12px; color: var(--text-muted); text-align: center; }
+    </style>
+</head>
+<body>
+
+    <!-- وضع التعديل (إدخال البيانات) -->
+    <div class="container" id="edit-mode">
+        <h2>إنشاء بطاقتي الشخصية</h2>
+        
+        <!-- الخانة الأولى: الصورة الشخصية من المعرض -->
+        <div class="input-group">
+            <label>صورتك الشخصية (من المعرض)</label>
+            <div class="file-input-wrapper">
+                <input type="file" id="inp-img-file" accept="image/*" onchange="handleImageUpload(event)">
+                <img id="preview-img" class="preview-img-edit" alt="معاينة">
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>الاسم بالكامل</label>
+            <input type="text" id="inp-name" placeholder="مثال: أحمد محمد">
+        </div>
+        <div class="input-group">
+            <label>الوظيفة / النبذة</label>
+            <input type="text" id="inp-title" placeholder="مثال: مطور برمجيات">
+        </div>
+        <div class="input-group">
+            <label>رقم الواتساب (مع كود الدولة)</label>
+            <input type="text" id="inp-wa" placeholder="مثال: 201xxxxxxxxx">
+        </div>
+        <div class="input-group">
+            <label>رقم التليفون</label>
+            <input type="text" id="inp-phone" placeholder="مثال: 01xxxxxxxxx">
+        </div>
+        <div class="input-group">
+            <label>رابط حساب فيسبوك</label>
+            <input type="url" id="inp-fb" placeholder="https://facebook.com/...">
+        </div>
+        <div class="input-group">
+            <label>رابط حساب انستجرام</label>
+            <input type="url" id="inp-ig" placeholder="https://instagram.com/...">
+        </div>
+        <div class="input-group">
+            <label>رابط العنوان (Google Maps)</label>
+            <input type="url" id="inp-loc" placeholder="https://goo.gl/maps/...">
+        </div>
+
+        <button class="btn" onclick="generateQR()">حفظ وإنشاء الـ QR Code</button>
+
+        <div id="qr-result">
+            <div id="qrcode"></div>
+            <a href="#" id="download-btn" class="btn btn-download" download="My_Profile_QR.png">تنزيل صورة الـ QR Code</a>
+        </div>
+    </div>
+
+    <!-- وضع العرض (الصفحة اللي بتفتح بعد الـ Scan) -->
+    <div class="container" id="view-mode">
+        <img src="" alt="Profile Image" class="profile-img" id="view-img" onerror="this.src='https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'">
+        <h1 class="profile-name" id="view-name">الاسم</h1>
+        <p class="profile-title" id="view-title">الوظيفة</p>
+
+        <div class="links-container">
+            <a href="#" id="link-wa" class="social-btn btn-whatsapp" target="_blank" style="display:none;">
+                <i class="fab fa-whatsapp"></i> تواصل عبر واتساب
+            </a>
+            <a href="#" id="link-phone" class="social-btn btn-phone" style="display:none;">
+                <i class="fas fa-phone-alt"></i> اتصل بي
+            </a>
+            <a href="#" id="link-fb" class="social-btn btn-facebook" target="_blank" style="display:none;">
+                <i class="fab fa-facebook-f"></i> فيسبوك
+            </a>
+            <a href="#" id="link-ig" class="social-btn btn-instagram" target="_blank" style="display:none;">
+                <i class="fab fa-instagram"></i> انستجرام
+            </a>
+            <a href="#" id="link-loc" class="social-btn btn-location" target="_blank" style="display:none;">
+                <i class="fas fa-map-marker-alt"></i> موقعي
+            </a>
+        </div>
+        <div class="watermark">تم الإنشاء بواسطة بطاقتي</div>
+    </div>
+
+    <script>
+        let base64Image = "";
+
+        // دالة معالجة وضغط الصورة المرفوعة من الموبايل
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        // ضبط أبعاد الصورة لتكون صغيرة ومناسبة للـ QR (مثلاً أقصى عرض 150 بكسل)
+                        const MAX_SIZE = 150;
+                        let width = img.width;
+                        let height = img.height;
+
+                        if (width > height) {
+                            if (width > MAX_SIZE) { height *= MAX_SIZE / width; width = MAX_SIZE; }
+                        } else {
+                            if (height > MAX_SIZE) { width *= MAX_SIZE / height; height = MAX_SIZE; }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        
+                        // تحويل الصورة لصيغة نصية مضغوطة
+                        base64Image = canvas.toDataURL('image/jpeg', 0.6);
+
+                        // عرض المعاينة للمستخدم
+                        const preview = document.getElementById('preview-img');
+                        preview.src = base64Image;
+                        preview.style.display = 'block';
+                    }
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // التحقق إذا كان الرابط يحتوي على بيانات مشفرة
+        const urlParams = new URLSearchParams(window.location.search);
+        const dataParam = urlParams.get('d');
+
+        if (dataParam) {
+            document.getElementById('edit-mode').style.display = 'none';
+            document.getElementById('view-mode').style.display = 'block';
+
+            try {
+                const decodedData = JSON.parse(decodeURIComponent(escape(atob(dataParam))));
+
+                document.getElementById('view-name').textContent = decodedData.n || 'بدون اسم';
+                document.getElementById('view-title').textContent = decodedData.t || '';
+                if(decodedData.i) document.getElementById('view-img').src = decodedData.i;
+
+                if(decodedData.w) {
+                    const waBtn = document.getElementById('link-wa');
+                    waBtn.href = 'https://wa.me/' + decodedData.w;
+                    waBtn.style.display = 'flex';
+                }
+                if(decodedData.p) {
+                    const phoneBtn = document.getElementById('link-phone');
+                    phoneBtn.href = 'tel:' + decodedData.p;
+                    phoneBtn.style.display = 'flex';
+                }
+                if(decodedData.f) {
+                    const fbBtn = document.getElementById('link-fb');
+                    fbBtn.href = decodedData.f;
+                    fbBtn.style.display = 'flex';
+                }
+                if(decodedData.ig) {
+                    const igBtn = document.getElementById('link-ig');
+                    igBtn.href = decodedData.ig;
+                    igBtn.style.display = 'flex';
+                }
+                if(decodedData.l) {
+                    const locBtn = document.getElementById('link-loc');
+                    locBtn.href = decodedData.l;
+                    locBtn.style.display = 'flex';
+                }
+            } catch (e) {
+                alert('عفواً، الرابط غير صحيح أو البيانات تالفة.');
+            }
+        }
+
+        // دالة إنشاء الـ QR Code
+        let qrcode = null;
+        function generateQR() {
+            const name = document.getElementById('inp-name').value;
+            if(!name) { alert('برجاء إدخال الاسم على الأقل!'); return; }
+
+            const dataObj = {
+                n: name,
+                t: document.getElementById('inp-title').value,
+                i: base64Image, // يتم إرفاق الصورة هنا
+                w: document.getElementById('inp-wa').value,
+                p: document.getElementById('inp-phone').value,
+                f: document.getElementById('inp-fb').value,
+                ig: document.getElementById('inp-ig').value,
+                l: document.getElementById('inp-loc').value,
+            };
+
+            const encodedData = btoa(unescape(encodeURIComponent(JSON.stringify(dataObj))));
+            const baseUrl = window.location.href.split('?')[0];
+            const finalUrl = baseUrl + '?d=' + encodedData;
+
+            document.getElementById('qrcode').innerHTML = '';
+
+            qrcode = new QRCode(document.getElementById("qrcode"), {
+                text: finalUrl,
+                width: 220,
+                height: 220,
+                colorDark : "#1f2937",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.L
+            });
+
+            setTimeout(() => {
+                const canvas = document.querySelector('#qrcode canvas');
+                if(canvas) {
+                    const downloadBtn = document.getElementById('download-btn');
+                    downloadBtn.href = canvas.toDataURL("image/png");
+                    downloadBtn.style.display = 'block';
+                }
+            }, 500);
+        }
+    </script>
+</body>
+</html>
