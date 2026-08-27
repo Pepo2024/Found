@@ -40,7 +40,7 @@
         .btn-download:hover { background: #059669; }
 
         #qr-result { display: flex; flex-direction: column; align-items: center; margin-top: 20px; gap: 15px; }
-        #qrcode { padding: 15px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #qrcode { padding: 15px; background: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; justify-content: center; align-items: center; }
 
         /* تنسيقات صفحة العرض (بعد الـ Scan) */
         #view-mode { display: none; text-align: center; }
@@ -143,7 +143,7 @@
     <script>
         let base64Image = "";
 
-        // دالة معالجة وضغط الصورة المرفوعة من الموبايل
+        // دالة ضغط الصورة لتصبح صغيرة ومناسبة تماماً للـ QR
         function handleImageUpload(event) {
             const file = event.target.files[0];
             if (file) {
@@ -155,8 +155,8 @@
                         const canvas = document.createElement('canvas');
                         const ctx = canvas.getContext('2d');
                         
-                        // ضبط أبعاد الصورة لتكون صغيرة ومناسبة للـ QR (مثلاً أقصى عرض 150 بكسل)
-                        const MAX_SIZE = 150;
+                        // تصغير أبعاد الصورة لأقصى حد (50 بكسل) لتجنب امتلاء الـ QR
+                        const MAX_SIZE = 50;
                         let width = img.width;
                         let height = img.height;
 
@@ -170,10 +170,9 @@
                         canvas.height = height;
                         ctx.drawImage(img, 0, 0, width, height);
                         
-                        // تحويل الصورة لصيغة نصية مضغوطة
-                        base64Image = canvas.toDataURL('image/jpeg', 0.6);
+                        // ضغط جودة الصورة إلى 40% لتقليل حجم النص الناتج
+                        base64Image = canvas.toDataURL('image/jpeg', 0.4);
 
-                        // عرض المعاينة للمستخدم
                         const preview = document.getElementById('preview-img');
                         preview.src = base64Image;
                         preview.style.display = 'block';
@@ -211,7 +210,7 @@
                 if(decodedData.f) {
                     const fbBtn = document.getElementById('link-fb');
                     fbBtn.href = decodedData.f;
-                    fbBtn.style.display = 'flex';
+                    fbBtn.style.display.display = 'flex';
                 }
                 if(decodedData.ig) {
                     const igBtn = document.getElementById('link-ig');
@@ -237,7 +236,7 @@
             const dataObj = {
                 n: name,
                 t: document.getElementById('inp-title').value,
-                i: base64Image, // يتم إرفاق الصورة هنا
+                i: base64Image,
                 w: document.getElementById('inp-wa').value,
                 p: document.getElementById('inp-phone').value,
                 f: document.getElementById('inp-fb').value,
@@ -245,29 +244,34 @@
                 l: document.getElementById('inp-loc').value,
             };
 
-            const encodedData = btoa(unescape(encodeURIComponent(JSON.stringify(dataObj))));
+            const jsonString = JSON.stringify(dataObj);
+            const encodedData = btoa(unescape(encodeURIComponent(jsonString)));
             const baseUrl = window.location.href.split('?')[0];
             const finalUrl = baseUrl + '?d=' + encodedData;
 
             document.getElementById('qrcode').innerHTML = '';
 
-            qrcode = new QRCode(document.getElementById("qrcode"), {
-                text: finalUrl,
-                width: 220,
-                height: 220,
-                colorDark : "#1f2937",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.L
-            });
+            try {
+                qrcode = new QRCode(document.getElementById("qrcode"), {
+                    text: finalUrl,
+                    width: 200,
+                    height: 200,
+                    colorDark : "#1f2937",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.L
+                });
 
-            setTimeout(() => {
-                const canvas = document.querySelector('#qrcode canvas');
-                if(canvas) {
-                    const downloadBtn = document.getElementById('download-btn');
-                    downloadBtn.href = canvas.toDataURL("image/png");
-                    downloadBtn.style.display = 'block';
-                }
-            }, 500);
+                setTimeout(() => {
+                    const canvas = document.querySelector('#qrcode canvas');
+                    if(canvas) {
+                        const downloadBtn = document.getElementById('download-btn');
+                        downloadBtn.href = canvas.toDataURL("image/png");
+                        downloadBtn.style.display = 'block';
+                    }
+                }, 300);
+            } catch (err) {
+                alert('البيانات أو الصورة كبيرة جداً، حاول تقليل الروابط أو اختيار صورة أصغر قليلاً.');
+            }
         }
     </script>
 </body>
